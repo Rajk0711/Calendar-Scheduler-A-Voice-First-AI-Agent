@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage, SystemMessage
-from .tools import list_events, create_event, check_availability
+from .tools import list_events, create_event, check_availability, send_email_notification
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +23,7 @@ llm = ChatGoogleGenerativeAI(
 )
 
 # Bind Tools
-tools = [list_events, create_event, check_availability]
+tools = [list_events, create_event, check_availability, send_email_notification]
 llm_with_tools = llm.bind_tools(tools)
 
 # System Prompt
@@ -38,6 +38,10 @@ RULES:
    - If the user says "next week", ask for a specific day or check the whole week.
 4. **Ambiguity**: Ask clarifying questions if the request is vague (e.g., "sometime late").
 5. **Confirmation**: Always confirm the details (Summary, Date, Time) before calling 'create_event'.
+6. **Email Notifications**:
+   - If the user asks to "email me" or "send a notification", use 'send_email_notification'.
+   - Ask for the email address if not provided.
+   - Confirm details before sending.
 """
 
 # Define Nodes

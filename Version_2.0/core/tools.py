@@ -41,12 +41,28 @@ MOCK_EVENTS = [
 ]
 
 def get_calendar_service():
-    service_account_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    # Try Streamlit Secrets first (Cloud)
+    try:
+        import streamlit as st
+        if "GOOGLE_CREDENTIALS" in st.secrets:
+            service_account_info = st.secrets["GOOGLE_CREDENTIALS"]
+    except ImportError:
+        pass
+
+    # Fallback to Environment Variable (Local)
+    if not service_account_info:
+        service_account_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+
     if not service_account_info:
         return None
     
     try:
-        creds_dict = json.loads(service_account_info)
+        # Check if info is dict (from secrets) or string (from env)
+        if isinstance(service_account_info, str):
+            creds_dict = json.loads(service_account_info)
+        else:
+            creds_dict = service_account_info
+            
         creds = service_account.Credentials.from_service_account_info(
             creds_dict, scopes=['https://www.googleapis.com/auth/calendar']
         )
@@ -131,3 +147,50 @@ def check_availability(start_time: str, end_time: str) -> bool:
         return False # Busy
     
     return True # Free
+
+@tool
+def send_email_notification(recipient_email: str, subject: str, body: str) -> str:
+    """
+    Send an email notification via Gmail SMTP.
+    Requires EMAIL_ADDRESS and EMAIL_PASSWORD in secrets or environment.
+    Args:
+        recipient_email: The email address to send to.
+        subject: The subject of the email.
+        body: The plain text body of the email.
+    """
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    email_address = os.environ.get("EMAIL_ADDRESS")
+    email_password = os.environ.get("EMAIL_PASSWORD")
+
+    # Try Streamlit Secrets if env vars are missing
+    try:
+        import streamlit as st
+        if not email_address and "EMAIL_ADDRESS" in st.secrets:
+            email_address = st.secrets["EMAIL_ADDRESS"]
+        if not email_password and "EMAIL_PASSWORD" in st.secrets:
+            email_password = st.secrets["EMAIL_PASSWORD"]
+    except ImportError:
+        pass
+
+    if not email_address or not email_password:
+        return "Error: Email credentials not configured."
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = email_address
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Connect to Gmail SMTP
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(email_address, email_password)
+            server.send_message(msg)
+        
+        return f"Email sent successfully to {recipient_email}"
+    except Exception as e:
+        return f"Error sending email: {str(e)}"

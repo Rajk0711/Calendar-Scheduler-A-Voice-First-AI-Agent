@@ -40,7 +40,7 @@ if "messages" not in st.session_state:
 
 # Sidebar for controls
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header("Settings")
     
     # 1. Personality Switcher
     selected_personality = st.selectbox(
@@ -53,7 +53,7 @@ with st.sidebar:
     current_system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + PERSONALITY_PROMPTS[selected_personality]
     
     # 2. Smart Daily Briefing Button
-    if st.button("🌅 Brief Me (Smart Summary)"):
+    if st.button("Brief Me (Smart Summary)"):
         st.session_state['trigger_briefing'] = True
 
 # Handle Briefing Trigger

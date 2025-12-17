@@ -8,7 +8,21 @@ from dotenv import load_dotenv
 
 # Add root directory to path to find 'core'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.agent import agent_executor
+from core.agent import agent_executor, SYSTEM_PROMPT as BASE_SYSTEM_PROMPT
+
+# Define Personality Prompts
+PERSONALITY_PROMPTS = {
+    "Professional Executive": """
+    Tone: Formal, concise, and efficient.
+    Style: Use business terminology. Focus on productivity and clear outcomes.
+    Example: "I have scheduled the meeting. Is there anything else?"
+    """,
+    "Chill Bestie": """
+    Tone: Casual, friendly, and enthusiastic. Use emojis! 🌟
+    Style: Talk like a helpful friend. Be supportive and relaxed.
+    Example: "Got it! Meeting is booked! 🎉 Anything else you need, bestie?"
+    """
+}
 
 load_dotenv()
 
@@ -23,6 +37,49 @@ st.title("Voice-Enabled AI Scheduling Agent")
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Sidebar for controls
+with st.sidebar:
+    st.header("⚙️ Settings")
+    
+    # 1. Personality Switcher
+    selected_personality = st.selectbox(
+        "Choose Agent Persona:",
+        list(PERSONALITY_PROMPTS.keys()),
+        index=0
+    )
+    
+    # Update system prompt based on selection
+    current_system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + PERSONALITY_PROMPTS[selected_personality]
+    
+    # 2. Smart Daily Briefing Button
+    if st.button("🌅 Brief Me (Smart Summary)"):
+        st.session_state['trigger_briefing'] = True
+
+# Handle Briefing Trigger
+if st.session_state.get('trigger_briefing', False):
+    # We will trigger the processing below, but first let's handle system prompt updates
+    pass 
+
+# Update the System Prompt if personality changes
+if "last_personality" not in st.session_state:
+    st.session_state.last_personality = selected_personality
+
+if st.session_state.last_personality != selected_personality:
+    st.session_state.last_personality = selected_personality
+    st.session_state.messages = [] # Clear chat to apply new persona cleanly
+    st.rerun()
+
+from langchain_core.messages import SystemMessage
+if not st.session_state.messages:
+    # Initialize with the selected system prompt
+    st.session_state.messages.append(SystemMessage(content=current_system_prompt))
+else:
+    # If messages exist, ensure the first message is the correct SystemMessage
+    if isinstance(st.session_state.messages[0], SystemMessage):
+        if st.session_state.messages[0].content != current_system_prompt:
+             st.session_state.messages[0] = SystemMessage(content=current_system_prompt)
+
 
 # Display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -45,8 +102,14 @@ def process_input(user_input):
     # Call Agent
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            # Prepare state
-            state = {"messages": st.session_state.messages}
+            # Prepare state with optimized context window
+            # Always keep the first message (likely System Prompt) and the last 10 messages
+            if len(st.session_state.messages) > 10:
+                short_history = [st.session_state.messages[0]] + st.session_state.messages[-10:]
+            else:
+                short_history = st.session_state.messages
+                
+            state = {"messages": short_history}
             result = agent_executor.invoke(state)
             
             # Get last message
@@ -122,5 +185,6 @@ if audio_value:
             st.error(f"Transcription Error: {e}")
 
 # Text Input (Fallback)
-if prompt := st.chat_input("Or type your message here..."):
+if prompt := st.chat_input("How can I help you..."):
     process_input(prompt)
+

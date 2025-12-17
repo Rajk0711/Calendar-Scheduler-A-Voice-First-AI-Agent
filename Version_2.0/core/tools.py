@@ -5,6 +5,8 @@ from typing import Optional, List, Dict
 from langchain_core.tools import tool
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+import streamlit as st
+
 
 # Mock Data
 MOCK_EVENTS = [
@@ -40,35 +42,108 @@ MOCK_EVENTS = [
     }
 ]
 
+
+# DEBUGGING: Print status
+import streamlit as st
+
 def get_calendar_service():
     # Try Streamlit Secrets first (Cloud)
     try:
         import streamlit as st
         if "GOOGLE_CREDENTIALS" in st.secrets:
             service_account_info = st.secrets["GOOGLE_CREDENTIALS"]
+            st.toast("Loaded credentials from Streamlit Secrets", icon="☁️")
     except ImportError:
         pass
 
     # Fallback to Environment Variable (Local)
     if not service_account_info:
         service_account_info = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if service_account_info:
+             st.toast("Loaded credentials from Environment Variable", icon="💻")
+
+    # Fallback to local file 'credentials.json' (Ease of use)
+    if not service_account_info:
+        try:
+            local_creds_path = os.path.join(os.path.dirname(__file__), '..', 'credentials.json')
+            if os.path.exists(local_creds_path):
+                with open(local_creds_path, 'r') as f:
+                    service_account_info = f.read()
+                st.toast("Loaded credentials.json file", icon="📂")
+            else:
+                 st.error(f"Could not find credentials.json at {local_creds_path}")
+        except Exception as e:
+            st.error(f"Error reading local file: {e}")
 
     if not service_account_info:
+        st.error("No valid credentials found (Secrets, Env, or File).")
         return None
     
     try:
-        # Check if info is dict (from secrets) or string (from env)
+        # Check if info is dict (from secrets) or string (from env/file)
         if isinstance(service_account_info, str):
-            creds_dict = json.loads(service_account_info)
+            creds_opt = json.loads(service_account_info)
         else:
-            creds_dict = service_account_info
+            creds_opt = service_account_info
             
-        creds = service_account.Credentials.from_service_account_info(
-            creds_dict, scopes=['https://www.googleapis.com/auth/calendar']
-        )
+        # Decision: Service Account vs User OAuth
+        if 'type' in creds_opt and creds_opt['type'] == 'service_account':
+            st.toast("Using Service Account Authentication", icon="🤖")
+            # Option A: Service Account (Best for Server/Cloud if Calendar is shared)
+            creds = service_account.Credentials.from_service_account_info(
+                creds_opt, scopes=['https://www.googleapis.com/auth/calendar']
+            )
+        elif 'installed' in creds_opt:
+            st.toast("Using Desktop Client Authentication", icon="🖥️")
+            # Option B: Desktop OAuth (Best for Local Personal Testing)
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from google.auth.transport.requests import Request
+            
+            creds = None
+            token_path = os.path.join(os.path.dirname(__file__), '..', 'token.json')
+            
+            # Load cached token if exists
+            if os.path.exists(token_path):
+                st.toast("Found cached token.json", icon="🎫")
+                try:
+                    from google.oauth2.credentials import Credentials
+                    creds = Credentials.from_authorized_user_file(token_path, ['https://www.googleapis.com/auth/calendar'])
+                except Exception as e:
+                    st.warning(f"Cached token invalid, refreshing... {e}")
+            
+            # If no valid token, let user log in
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    st.toast("Refreshing expired token...", icon="🔄")
+                    creds.refresh(Request())
+                else:
+                    st.toast("Starting Browser Login Flow...", icon="🌐")
+                    if isinstance(service_account_info, str):
+                         # Write to temp file because InstalledAppFlow needs a file path usually, 
+                         # or we can use from_client_config if we have the dict
+                         pass 
+                    
+                    # Simpler: Use from_client_config since we have the dict `creds_opt`
+                    flow = InstalledAppFlow.from_client_config(
+                        creds_opt, scopes=['https://www.googleapis.com/auth/calendar']
+                    )
+                    # Run local server
+                    creds = flow.run_local_server(port=0)
+                
+                # Save the token for next run
+                with open(token_path, 'w') as token:
+                    token.write(creds.to_json())
+
+        else:
+            st.error(f"Unknown credential type in JSON: {creds_opt.keys()}")
+            return None
+
         service = build('calendar', 'v3', credentials=creds)
+        st.toast("Calendar Service Built Successfully!", icon="✅")
         return service
     except Exception as e:
+        import streamlit as st
+        st.error(f"Authentication Error: {str(e)}")
         print(f"Error creating service: {e}")
         return None
 

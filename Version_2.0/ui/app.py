@@ -130,21 +130,28 @@ def process_input(user_input):
                 
                 # Speed up audio using ffmpeg
                 output_audio_path = original_audio_path.replace(".mp3", "_fast.mp3")
-                import subprocess
-                subprocess.run([
-                    "ffmpeg", "-i", original_audio_path, 
-                    "-filter:a", "atempo=1.75", 
-                    "-vn", output_audio_path, "-y"
-                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                
-                # Play faster audio
-                st.audio(output_audio_path, format="audio/mp3", autoplay=True)
+                # Speed up audio using ffmpeg (Optional)
+                try:
+                    import subprocess
+                    subprocess.run([
+                        "ffmpeg", "-i", original_audio_path, 
+                        "-filter:a", "atempo=1.75", 
+                        "-vn", output_audio_path, "-y"
+                    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    
+                    # Play faster audio
+                    st.audio(output_audio_path, format="audio/mp3", autoplay=True)
+                except (FileNotFoundError, Exception) as e:
+                    # Fallback to normal speed if ffmpeg is missing or fails
+                    st.warning(f"Audio speedup unavailable (running normal speed). Error: {e}")
+                    st.audio(original_audio_path, format="audio/mp3", autoplay=True)
                 
                 # Cleanup
-                os.remove(original_audio_path)
-                # os.remove(output_audio_path) # Streamlit might need it for a bit, let OS handle temp cleanup or delete later
+                # os.remove(original_audio_path) 
+
             except Exception as e:
-                st.error(f"TTS Error: {e}")
+                 st.error(f"TTS Error: {e}")
+
 
 # Audio Input
 audio_value = st.audio_input("Speak to the agent")

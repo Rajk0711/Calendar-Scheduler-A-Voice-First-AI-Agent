@@ -17,6 +17,14 @@ Use the **Best Tool for the Job** approach:
 
 ---
 
+## Local Testing (Important!)
+To test the Google Calendar features locally without seeing "[MOCK]" data:
+1.  **Download Credentials**: Go to GCP Console > Credentials > Download JSON for your OAuth Client.
+2.  **Save File**: Rename it to `credentials.json` and place it inside the `Version_2.0` folder.
+3.  **Env Variable**: Ensure your code can see it. Our code checks `GOOGLE_SERVICE_ACCOUNT_JSON` environment variable for the *content*, OR it looks for the file if we added that logic. 
+    *   *Correction*: The current code expects the **JSON Content** inside an environment variable named `GOOGLE_SERVICE_ACCOUNT_JSON`.
+    *   **Easier Way for Local**: You can modify `tools.py` to read from the file `credentials.json` directly if the env var is missing! (I will add this fallback for you).
+
 ## Option 1: Deploying to Streamlit Community Cloud (Recommended)
 This is likely what your assignment accepts as "Deployed Online" for a Python AI app.
 

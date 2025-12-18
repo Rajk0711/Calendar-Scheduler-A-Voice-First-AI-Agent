@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import tempfile
+import datetime
 from gtts import gTTS
 from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
@@ -18,9 +19,9 @@ PERSONALITY_PROMPTS = {
     Example: "I have scheduled the meeting. Is there anything else?"
     """,
     "Chill Bestie": """
-    Tone: Casual, friendly, and enthusiastic. Use emojis! 🌟
+    Tone: Casual, friendly, and enthusiastic. Use positive language!
     Style: Talk like a helpful friend. Be supportive and relaxed.
-    Example: "Got it! Meeting is booked! 🎉 Anything else you need, bestie?"
+    Example: "Got it! Meeting is booked! Anything else you need, bestie?"
     """
 }
 
@@ -40,7 +41,7 @@ if "messages" not in st.session_state:
 
 # Sidebar for controls
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header("Settings")
     
     # 1. Personality Switcher
     selected_personality = st.selectbox(
@@ -53,13 +54,33 @@ with st.sidebar:
     current_system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + PERSONALITY_PROMPTS[selected_personality]
     
     # 2. Smart Daily Briefing Button
-    if st.button("🌅 Brief Me (Smart Summary)"):
+    if st.button("Brief Me (Smart Summary)"):
         st.session_state['trigger_briefing'] = True
+        
+    # 3. Today's Schedule Button
+    if st.button("Today's Agenda"):
+        st.session_state['trigger_today_schedule'] = True
 
 # Handle Briefing Trigger
 if st.session_state.get('trigger_briefing', False):
-    # We will trigger the processing below, but first let's handle system prompt updates
     pass 
+
+# Handle Today's Schedule Trigger
+if st.session_state.get('trigger_today_schedule', False):
+    st.session_state['trigger_today_schedule'] = False
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    with st.chat_message("assistant"):
+        with st.spinner("Fetching today's schedule..."):
+            from core.tools import get_daily_schedule
+            schedule = get_daily_schedule.invoke({"date_str": today_str})
+            
+            # Simple prompt to LLM to summarize
+            prompt = f"Here is my activity log for today ({today_str}):\n{schedule}\n\nPlease give me a concise briefing of what I've done or what's scheduled."
+            state = {"messages": st.session_state.messages + [HumanMessage(content=prompt)]}
+            result = agent_executor.invoke(state)
+            response_text = result["messages"][-1].content
+            st.markdown(response_text)
+            st.session_state.messages.append(AIMessage(content=response_text))
 
 # Update the System Prompt if personality changes
 if "last_personality" not in st.session_state:
@@ -134,9 +155,6 @@ def process_input(user_input):
                 # Play faster audio
                 st.audio(output_audio_path, format="audio/mp3", autoplay=True)
                 
-                # Cleanup
-                os.remove(original_audio_path)
-                # os.remove(output_audio_path) # Streamlit might need it for a bit, let OS handle temp cleanup or delete later
             except Exception as e:
                 st.error(f"TTS Error: {e}")
 

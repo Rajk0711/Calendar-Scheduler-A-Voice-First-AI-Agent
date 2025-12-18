@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage, SystemMessage
-from .tools import list_events, create_event, check_availability
+from .tools import list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +23,7 @@ llm = ChatGoogleGenerativeAI(
 )
 
 # Bind Tools
-tools = [list_events, create_event, check_availability]
+tools = [list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule]
 llm_with_tools = llm.bind_tools(tools)
 
 # System Prompt

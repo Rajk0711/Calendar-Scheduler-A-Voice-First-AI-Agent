@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage, SystemMessage
-from .tools import list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule
+from .tools import list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule, search_activity_logs
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +23,7 @@ llm = ChatGoogleGenerativeAI(
 )
 
 # Bind Tools
-tools = [list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule]
+tools = [list_events, create_event, update_event, delete_event, check_availability, get_daily_schedule, search_activity_logs]
 llm_with_tools = llm.bind_tools(tools)
 
 # System Prompt
@@ -33,11 +33,14 @@ Current time: {datetime.datetime.now().isoformat()}.
 RULES:
 1. **Check Availability First**: Always check availability using 'check_availability' or 'list_events' before booking.
 2. **Conflict Resolution**: If a slot is busy, DO NOT give up. Suggest the next best available time.
-3. **Complex Time Parsing**: 
+3. **Activity Logs & Searching**: 
+   - Use 'search_activity_logs' to find specific events (e.g., "Day Off", "Birthday", "Townhall") in your activity history.
+   - Use 'get_daily_schedule' to get details of a specific day's records.
+4. **Complex Time Parsing**: 
    - If the user says "after my flight", use 'list_events' to find the flight first, then calculate the time.
    - If the user says "next week", ask for a specific day or check the whole week.
-4. **Ambiguity**: Ask clarifying questions if the request is vague (e.g., "sometime late").
-5. **Confirmation**: Always confirm the details (Summary, Date, Time) before calling 'create_event'.
+5. **Ambiguity**: Ask clarifying questions if the request is vague (e.g., "sometime late").
+6. **Confirmation**: Always confirm the details (Summary, Date, Time) before calling 'create_event'.
 """
 
 # Define Nodes

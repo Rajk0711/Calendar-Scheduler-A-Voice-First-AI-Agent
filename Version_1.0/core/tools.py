@@ -69,25 +69,70 @@ def get_daily_schedule(date_str: str) -> str:
 @tool
 def list_events(time_min: str, time_max: str) -> List[Dict]:
     """
-    List calendar events for a given date range.
+    List calendar events for a given date range. Also checks local activity logs for mock events.
     Args:
         time_min: Start time in ISO format (e.g., 2023-10-25T10:00:00Z)
         time_max: End time in ISO format
     """
-    service = get_calendar_service()
+    all_events = []
     
-    if not service:
-        # If no service, return empty list or handle mock as per logs
-        return []
+    # 1. Fetch from Google Calendar if available
+    service = get_calendar_service()
+    if service:
+        try:
+            events_result = service.events().list(
+                calendarId='primary', timeMin=time_min, timeMax=time_max,
+                singleEvents=True, orderBy='startTime'
+            ).execute()
+            all_events.extend(events_result.get('items', []))
+        except Exception as e:
+            print(f"Google Calendar API Error: {e}")
 
+    # 2. Extract events from local activity logs for the given range
     try:
-        events_result = service.events().list(
-            calendarId='primary', timeMin=time_min, timeMax=time_max,
-            singleEvents=True, orderBy='startTime'
-        ).execute()
-        return events_result.get('items', [])
+        # Normalize ISO strings for fromisoformat (handle Z)
+        t_min = time_min.replace("Z", "+00:00")
+        t_max = time_max.replace("Z", "+00:00")
+        start_date = datetime.datetime.fromisoformat(t_min).date()
+        end_date = datetime.datetime.fromisoformat(t_max).date()
+        
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            log_content = get_daily_schedule.invoke({"date_str": date_str})
+            if "No events recorded" not in log_content:
+                # Basic parsing of CREATE or MOCK lines to simulate event objects
+                for line in log_content.splitlines():
+                    if ("CREATE:" in line or "MOCK:" in line) and "Summary:" in line:
+                        try:
+                            # Parse segments
+                            # [timestamp] TYPE: Summary: ..., Start: ..., End: ...
+                            # OR [timestamp] MOCK: Summary: ...
+                            summary = line.split("Summary: ")[1].split(",")[0].strip()
+                            
+                            # For MOCK entries from previous migration, they might not have start/end times in the same format
+                            # but for regular CREATE/UPDATE they do.
+                            start = current_date.isoformat() + "T09:00:00" # Default if not found
+                            end = current_date.isoformat() + "T10:00:00"
+                            
+                            if "Start: " in line:
+                                start = line.split("Start: ")[1].split(",")[0].strip()
+                            if "End: " in line:
+                                end = line.split("End: ")[1].split(",")[0].strip()
+                            
+                            all_events.append({
+                                "summary": summary,
+                                "start": {"dateTime": start},
+                                "end": {"dateTime": end},
+                                "mock": True
+                            })
+                        except Exception:
+                            continue
+            current_date += datetime.timedelta(days=1)
     except Exception as e:
-        return [{"error": str(e)}]
+        print(f"Error parsing local logs: {e}")
+
+    return all_events
 
 @tool
 def create_event(summary: str, start_time: str, end_time: str) -> Dict:
@@ -186,6 +231,37 @@ def delete_event(event_id: str) -> str:
         return f"Event {event_id} deleted successfully."
     except Exception as e:
         return f"Error deleting event: {str(e)}"
+
+@tool
+def search_activity_logs(query: str) -> str:
+    """
+    Scans all daily log files in the 'event_logs' folder for a specific keyword or phrase.
+    Use this to find entries like 'Day Off', 'Birthday', 'Townhall', 'Holiday', etc.
+    Args:
+        query: The keyword or phrase to search for.
+    """
+    matches = []
+    try:
+        if not os.path.exists(LOG_DIR):
+            return "No activity logs found."
+            
+        for filename in sorted(os.listdir(LOG_DIR)):
+            if filename.startswith("event_log_") and filename.endswith(".txt"):
+                file_path = os.path.join(LOG_DIR, filename)
+                with open(file_path, "r") as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        if query.lower() in line.lower():
+                            # Extract date from filename: event_log_YYYY-MM-DD.txt
+                            date_str = filename.replace("event_log_", "").replace(".txt", "")
+                            matches.append(f"[{date_str}] {line.strip()}")
+        
+        if not matches:
+            return f"No entries matching '{query}' were found in the logs."
+            
+        return f"I found the following matches for '{query}':\n" + "\n".join(matches)
+    except Exception as e:
+        return f"Error searching logs: {e}"
 
 @tool
 def check_availability(start_time: str, end_time: str) -> bool:

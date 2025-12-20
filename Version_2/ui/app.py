@@ -5,6 +5,7 @@ import tempfile
 import datetime
 from gtts import gTTS
 from langchain_core.messages import HumanMessage, AIMessage
+from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
 # Add root directory to path to find 'core'
@@ -176,39 +177,36 @@ def process_input(user_input):
 audio_value = st.audio_input("Speak to the agent")
 
 if audio_value:
-    # Transcribe audio (using Google Speech Recognition via SpeechRecognition lib would be ideal, 
-    # but for simplicity/dependency minimization, we might need an STT service.
-    # Since we didn't install SpeechRecognition, let's assume we need to add it or use a cloud API.
-    # Wait, the user requirement said "Voice-Enabled". 
-    # Streamlit's st.audio_input returns a file-like object.
-    # We need to transcribe it.
-    # Let's use Gemini for STT since we have the key!
+    # Use Hugging Face Whisper for STT
+    from huggingface_hub import InferenceClient
+    client = InferenceClient(api_key=os.environ.get("HUGGINGFACEHUB_API_TOKEN"))
     
-    import google.generativeai as genai
-    
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-    
-    with st.spinner("Transcribing..."):
+    with st.spinner("Transcribing with Whisper..."):
         try:
-            # Save to temp file because Gemini API might need path or bytes
-            # genai.upload_file supports path.
+            # Streamlit audio_input provides a file-like object. 
+            # We save it to a temp file to ensure headers are correctly set by the HF client.
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
                 tmp_audio.write(audio_value.read())
                 tmp_audio_path = tmp_audio.name
             
-            # Upload to Gemini
-            myfile = genai.upload_file(tmp_audio_path)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            
-            # Prompt for transcription
-            result = model.generate_content([myfile, "Transcribe this audio exactly."])
+            # Use Whisper model with the file path
+            result = client.automatic_speech_recognition(
+                audio=tmp_audio_path,
+                model="openai/whisper-large-v3-turbo"
+            )
             transcription = result.text
             
+            # Cleanup temp file
+            os.remove(tmp_audio_path)
+            
             # Process the transcribed text
-            process_input(transcription)
+            if transcription.strip():
+                process_input(transcription)
+            else:
+                st.warning("Could not transcribe any speech. Please try again.")
             
         except Exception as e:
-            st.error(f"Transcription Error: {e}")
+            st.error(f"Transcription Error (Whisper): {e}")
 
 # Text Input (Fallback)
 if prompt := st.chat_input("How can I help you..."):

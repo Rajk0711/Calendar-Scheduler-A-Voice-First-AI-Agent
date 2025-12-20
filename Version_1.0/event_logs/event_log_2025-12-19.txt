@@ -1,2 +1,0 @@
-[2025-12-19 19:29:14] MOCK: Summary: Team Meeting
-[2025-12-18 21:56:34] CREATE: Summary: onboarding, Start: 2025-12-19T10:00:00Z, End: 2025-12-19T11:00:00Z

@@ -1,0 +1,4 @@
+[2025-12-20 15:48:55] CREATE: Summary: TOwnHall meeting, Start: 2025-12-21T09:00:00, End: 2025-12-21T12:00:00
+[2025-12-20 15:49:00] CREATE: Summary: TOwnHall meeting, Start: 2025-12-21T09:00:00Z, End: 2025-12-21T12:00:00Z
+[2025-12-20 15:59:04] CREATE: Summary: Townhall Meeting, Start: 2025-12-21T09:00:00, End: 2025-12-21T12:00:00
+[2025-12-20 15:59:09] CREATE: Summary: Townhall Meeting, Start: 2025-12-21T09:00:00Z, End: 2025-12-21T12:00:00Z

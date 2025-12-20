@@ -1,0 +1,11 @@
+# Innovative Features for Voice AI Scheduler
+
+1. Smart Daily Briefing (Proactive AI)
+   - Concept: A "Brief Me" button that triggers a proactive summary of the day's schedule and highlights free slots.
+   - Innovation: Shifts AI from reactive to proactive.
+   - Implementation: Button triggers prompt: "Summarize my schedule for today and tell me when I have free time."
+
+2. Personality Mode Switcher
+   - Concept: Dropdown to switch between "Professional Executive" and "Chill Bestie" personas.
+   - Innovation: Personalization and engagement.
+   - Implementation: Dynamic System Prompt injection based on UI selection.

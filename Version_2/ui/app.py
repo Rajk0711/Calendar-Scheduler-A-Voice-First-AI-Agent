@@ -179,7 +179,7 @@ if audio_value:
             
             # Upload to Gemini
             myfile = genai.upload_file(tmp_audio_path)
-            model = genai.GenerativeModel("gemini-flash-latest")
+            model = genai.GenerativeModel("gemini-2.0-flash")
             
             # Prompt for transcription
             result = model.generate_content([myfile, "Transcribe this audio exactly."])

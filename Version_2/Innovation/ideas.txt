@@ -9,3 +9,9 @@
    - Concept: Dropdown to switch between "Professional Executive" and "Chill Bestie" personas.
    - Innovation: Personalization and engagement.
    - Implementation: Dynamic System Prompt injection based on UI selection.
+
+3. Today's Agenda (Activity Log Summary)
+   - Concept: A dedicated button to retrieve a comprehensive activity log of the entire day's events.
+   - Innovation: Instant visibility into past, present, and future tasks from system logs with a single click.
+   - Implementation: Built-in `get_daily_schedule` tool that parses local event logs for persistent tracking.
+

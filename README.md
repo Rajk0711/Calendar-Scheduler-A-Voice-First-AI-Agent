@@ -106,7 +106,8 @@ This project uses:
     EMAIL_PASSWORD=your_email_password
     PORT=3000
     ```
-   The `.gitignore` already excludes `.env` and `client_secrets.json`.[for safety reasons]
+### NOTE:
+The `.gitignore` SHOULD excludes `.env` and `client_secrets.json`.
 
 ### Usage
 

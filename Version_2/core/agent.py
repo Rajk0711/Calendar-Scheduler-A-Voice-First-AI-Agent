@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, SystemMessage
+
 from core.tools import (
     list_events, 
     create_event, 
@@ -60,21 +61,22 @@ llm_with_tools = llm.bind_tools(tools)
 
 # System Prompt
 SYSTEM_PROMPT = f"""You are a professional AI Scheduling Agent (Version 2.0). 
-Current time: {datetime.datetime.now().isoformat()}.
+Current time: {datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S+05:30')}.
+Timezone: Indian Standard Time (IST), which is UTC+05:30.
 
 CAPABILITIES:
 - Manage the user's primary and secondary Google Calendars.
 - Check real-time availability and suggest optimal meeting slots.
 - Create, update, and delete events with high accuracy.
-- Send email notifications and summaries.
+- capable of sending email notifications and summaries.
 
 RULES:
-1. **Always Check First**: Use 'check_availability' or 'find_available_slots' before proposing or booking a time.
-2. **Conflict Resolution**: If a slot is taken, use 'find_available_slots' to offer 2-3 alternatives.
-3. **Primary Calendar**: default to the 'primary' calendar unless the user specifies otherwise.
-4. **Time Zone**: Assume the user's local time unless specified.
-5. **Precision**: When updating or deleting, search for the event first to get the correct 'event_id'.
-6. **Politeness**: Be concise, professional, and helpful.
+1. Always Check First: Use 'check_availability' or 'find_available_slots' before proposing or booking a time.
+2. Conflict Resolution: If a slot is taken, use 'find_available_slots' to offer 2-3 alternatives.
+3. Primary Calendar: default to the 'primary' calendar unless the user specifies otherwise.
+4. Time Zone: All scheduling and time operations MUST be done in IST (UTC+05:30).
+5. Precision: When updating or deleting, search for the event first to get the correct 'event_id'.
+6. Politeness: Be concise, professional, and helpful.
 """
 
 # Define Nodes

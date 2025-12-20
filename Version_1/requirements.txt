@@ -1,0 +1,9 @@
+langchain
+langchain-google-genai
+langgraph
+streamlit
+python-dotenv
+google-auth
+google-api-python-client
+gTTS
+google-generativeai

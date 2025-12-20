@@ -201,8 +201,8 @@ def find_available_slots(date_str: str, start_hour: int = 9, end_hour: int = 18)
         start_hour: Start of the working day (e.g., 9 for 9 AM)
         end_hour: End of the working day (e.g., 18 for 6 PM)
     """
-    time_min = f"{date_str}T{start_hour:02d}:00:00Z"
-    time_max = f"{date_str}T{end_hour:02d}:00:00Z"
+    time_min = f"{date_str}T{start_hour:02d}:00:00+05:30"
+    time_max = f"{date_str}T{end_hour:02d}:00:00+05:30"
     
     events = list_events.invoke({"time_min": time_min, "time_max": time_max})
     if isinstance(events, dict) and "error" in events:

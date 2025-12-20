@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import tempfile
+import datetime
 from gtts import gTTS
 from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 # Add root directory to path to find 'core'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.agent import agent_executor, SYSTEM_PROMPT as BASE_SYSTEM_PROMPT
+from core.tools import get_daily_schedule
 
 # Define Personality Prompts
 PERSONALITY_PROMPTS = {
@@ -55,11 +57,28 @@ with st.sidebar:
     # 2. Smart Daily Briefing Button
     if st.button("Brief Me (Smart Summary)"):
         st.session_state['trigger_briefing'] = True
+    
+    # 3. Today's Schedule Button
+    if st.button("Today's Agenda"):
+        st.session_state['trigger_today_schedule'] = True
 
 # Handle Briefing Trigger
 if st.session_state.get('trigger_briefing', False):
-    # We will trigger the processing below, but first let's handle system prompt updates
-    pass 
+    st.session_state['trigger_briefing'] = False
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    # Briefing can be a summary of upcoming events
+    prompt = f"Please give me a smart summary of my day for {today_str}."
+    # We will let the process_input handle it or call it directly
+    st.session_state['manual_prompt'] = prompt
+
+# Handle Today's Schedule Trigger
+if st.session_state.get('trigger_today_schedule', False):
+    st.session_state['trigger_today_schedule'] = False
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    with st.spinner("Fetching today's schedule..."):
+        schedule = get_daily_schedule.invoke({"date_str": today_str})
+        prompt = f"Here is my activity log for today ({today_str}):\n{schedule}\n\nPlease give me a concise briefing of what I've done or what's scheduled."
+        st.session_state['manual_prompt'] = prompt
 
 # Update the System Prompt if personality changes
 if "last_personality" not in st.session_state:
@@ -179,7 +198,7 @@ if audio_value:
             
             # Upload to Gemini
             myfile = genai.upload_file(tmp_audio_path)
-            model = genai.GenerativeModel("gemini-2.0-flash")
+            model = genai.GenerativeModel("gemini-1.5-flash")
             
             # Prompt for transcription
             result = model.generate_content([myfile, "Transcribe this audio exactly."])
@@ -195,3 +214,7 @@ if audio_value:
 if prompt := st.chat_input("How can I help you..."):
     process_input(prompt)
 
+# Handle Manual Prompt (from buttons)
+if manual_prompt := st.session_state.get('manual_prompt'):
+    st.session_state['manual_prompt'] = None
+    process_input(manual_prompt)

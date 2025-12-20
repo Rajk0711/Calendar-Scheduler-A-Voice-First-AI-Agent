@@ -18,7 +18,8 @@ from core.tools import (
     list_calendars, 
     check_availability, 
     find_available_slots, 
-    send_email_notification
+    send_email_notification,
+    get_daily_schedule
 )
 from dotenv import load_dotenv
 
@@ -55,7 +56,8 @@ tools = [
     list_calendars, 
     check_availability, 
     find_available_slots, 
-    send_email_notification
+    send_email_notification,
+    get_daily_schedule
 ]
 llm_with_tools = llm.bind_tools(tools)
 

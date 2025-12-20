@@ -53,6 +53,19 @@ def log_action(action: str, details: str, target_date: Optional[str] = None):
         f.write(log_entry)
 
 @tool
+def get_daily_schedule(date_str: str) -> str:
+    """
+    Get the schedule/logs for a specific date from the event_logs folder.
+    Args:
+        date_str: Date in YYYY-MM-DD format.
+    """
+    filename = os.path.join(LOG_DIR, f"event_log_{date_str}.txt")
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            return f.read()
+    return f"No events recorded for {date_str}."
+
+@tool
 def list_calendars() -> List[Dict]:
     """Lists all calendars available in the user's account."""
     service = get_calendar_service()
